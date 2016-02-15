@@ -1,0 +1,22 @@
+{
+  "name": "Spacebrew",
+  "version": "0.0.1",
+  "main": "main.js",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/spacebrew/spacebrew-electron.git"
+  },
+  "keywords": [
+    "spaces",
+    "prototyping",
+    "websockets"
+  ],
+  "author": "Spacebrew",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "~0.4.25"
+  },
+  "devDependencies": {
+    "electron-prebuilt": "^0.36.7"
+  }
+}
