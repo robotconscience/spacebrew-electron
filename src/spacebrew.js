@@ -5,18 +5,21 @@
  * This module holds the core functionality of the Spacebrew server. To run this module as 
  * standalone app you should use the node_server.js or node_server_forever.js script.
  *
- * @author: 	LAB at Rockwell Group, Quin Kennedy, Brett Renfer, Josh Walton, James Tichenor, Julio Terra
- * @filename: 	node_server.js
- * @date: 		May 31, 2013
- * @updated with version: 	0.4.0 
+ * @author:     LAB at Rockwell Group, Quin Kennedy, Brett Renfer, Josh Walton, James Tichenor, Julio Terra
+ * @filename:   node_server.js
+ * @date:       May 31, 2013
+ * @updated with version:   0.4.0 
  *
  */
 
 //dependencies
 var path = require('path')
-	, ws = require('ws')
+    , ws = require('ws')
     , logger = require('./logger')
     , spacebrew = exports
+    , serveStatic = require('serve-static')
+    , http = require('http')
+    , finalhandler = require('finalhandler')
     ;
  
 //create a new WebsocketServer
@@ -25,6 +28,15 @@ spacebrew.createServer = function( opts ){
     var expose = {};
     opts = opts || {};
     opts.port = opts.port || 9000;
+    opts.adminDir = opts.adminDir || 'admin';
+
+    console.log(opts.adminDir);
+    
+    /** 
+     * host can be set to limit which network interfaces to listen on.
+     *   The default is 0.0.0.0 which will listen on all interfaces.
+     *   Setting 'localhost' will only listen on the loopback interface
+     */
     opts.host = opts.host || '0.0.0.0';
     opts.ping = opts.ping || true;
     opts.forceClose = opts.forceClose || false;
@@ -34,15 +46,21 @@ spacebrew.createServer = function( opts ){
 
     logger.log("info", "[createServer] log level set to " + logger.debugLevel);
 
-    /**
-     * startup the websocket server.
-     * The port specifies which port to listen on
-     * The 'host = 0.0.0.0' specifies to listen to ALL incoming traffic, 
-     * not just localhost or a specific IP
-     */
+    // create basic static folder
+    var serve = serveStatic(opts.adminDir);
+
+    var server = http.createServer(
+        function(req, res){
+            var done = finalhandler(req, res)
+            serve(req, res, done)
+        }
+    );
+
+    server.listen(opts.port, opts.host);
+
+    // allow websocket connections on the existing server.
     var wss = new ws.Server({
-            port: opts.port,
-            host: opts.host
+            server: server
         });
 
     expose.wss = wss;
@@ -152,7 +170,7 @@ spacebrew.createServer = function( opts ){
                 }
 
                 try{
-                	// handle client app configuration messages
+                    // handle client app configuration messages
                     if (tMsg['config']) {
                         bValidMessage = handleConfigMessage(connection, tMsg);
                     } 
@@ -308,12 +326,12 @@ spacebrew.createServer = function( opts ){
      * @return {boolean}      True iff the message comes from a publisher that exists
      */
     var handleMessageMessage = function(connection, tMsg){
-    	var pubClient = undefined
-    		, bValidMessage = false
-    		, pub = undefined
-    		, sub = undefined
-    		, toSend = {}
-    		;
+        var pubClient = undefined
+            , bValidMessage = false
+            , pub = undefined
+            , sub = undefined
+            , toSend = {}
+            ;
 
         // make sure that this connection is associated to at least one client
         if (!connection.spacebrew_client_list){
@@ -322,10 +340,10 @@ spacebrew.createServer = function( opts ){
         }
 
         // check whether the client that sent the message is associated to the connection where the 
-        //  	message was received
+        //      message was received
         if (!(pubClient = connection.spacebrew_client_list[tMsg.message.clientName])){
             logger.log("info",  "[handleMessageMessage] the client: " + tMsg.message.clientName + 
-            						" does not belong to this connection");
+                                    " does not belong to this connection");
             return false;
         }
 
@@ -354,10 +372,10 @@ spacebrew.createServer = function( opts ){
 
                     // try to send the message but catch error so the server won't crash due to issues
                     try{
-                    	toSend['message'] = {
-                            	'name': sub.subscriber.name,
-                            	'type': tMsg.message.type,
-                            	'value': tMsg.message.value,
+                        toSend['message'] = {
+                                'name': sub.subscriber.name,
+                                'type': tMsg.message.type,
+                                'value': tMsg.message.value,
                                 'clientName': sub.client.name
                         }
 
@@ -366,21 +384,21 @@ spacebrew.createServer = function( opts ){
 
                     } catch(err){
                         logger.log("debug", "[handleMessageMessage] ERROR sending message to client " + 
-                        						sub.client.name + ", on subscriber " +
-                        						sub.subscriber.name + " error message " + err );
+                                                sub.client.name + ", on subscriber " +
+                                                sub.subscriber.name + " error message " + err );
                     }
                 }
             }
 
-        	// if publisher's type does not match then abort
-        	else {
+            // if publisher's type does not match then abort
+            else {
                 logger.log("info", "[handleMessageMessage] an un-registered publisher type: " + tMsg.message.type + " with name: " + tMsg.message.name);
                 return false;
             } 
         }
 
         // if publishing client does not have the appropriate publisher then abort
-	    else {
+        else {
             logger.log("info", "[handleMessageMessage] an un-registered publisher name: " + tMsg.message.name);
             return false;
         } 
@@ -606,14 +624,14 @@ spacebrew.createServer = function( opts ){
      */
     var handleConfigMessage = function(connection, tMsg){
         var bValidMessage = false
-        	, trustedClient = undefined
-        	, msgName = tMsg['config']['name']
-        	, msgAddress = getClientAddress(connection)
-        	;
+            , trustedClient = undefined
+            , msgName = tMsg['config']['name']
+            , msgAddress = getClientAddress(connection)
+            ;
 
         // check if websocket client already has registered client app with same name
         if (connection.spacebrew_client_list && 
-        	connection.spacebrew_client_list[msgName]){
+            connection.spacebrew_client_list[msgName]){
 
             // if so, then set trustedClient to existing client
             trustedClient = connection.spacebrew_client_list[msgName];
@@ -625,7 +643,7 @@ spacebrew.createServer = function( opts ){
 
             for (var i = trustedClients.length - 1; i >= 0; i--) {
 
-            	// if client exists with name and remote address pair
+                // if client exists with name and remote address pair
                 if (trustedClients[i]['name'] === msgName &&
                     trustedClients[i]['remoteAddress'] === msgAddress){
 
@@ -725,11 +743,11 @@ spacebrew.createServer = function( opts ){
 
         // process client options
         if (tMsg.config.options){
-        	// update supported options only (present in trustedClient object)
+            // update supported options only (present in trustedClient object)
             for (var option in trustedClient.options) {
-            	if (tMsg.config.options[option]) {
-            		trustedClient.options[option] = tMsg.config.options[option];
-            	}
+                if (tMsg.config.options[option]) {
+                    trustedClient.options[option] = tMsg.config.options[option];
+                }
             };
         } 
 
@@ -805,9 +823,9 @@ spacebrew.createServer = function( opts ){
         for (var i = currBase[otherTypePlural].length - 1; i >= 0; i--) {
             var currLeaf = currBase[otherTypePlural][i];
             var messageContent = {
-					            	type:'remove'
-					            	, client_disconnect: true  // used to identify message as cleanup message
-					            };
+                                    type:'remove'
+                                    , client_disconnect: true  // used to identify message as cleanup message
+                                };
             messageContent[otherType] = {clientName:currLeaf.client.name,
                                             name:currLeaf[otherType].name,
                                             type:currLeaf[otherType].type,
@@ -915,25 +933,25 @@ spacebrew.createServer = function( opts ){
         json.targetType = "admin";
         var toSend = JSON.stringify(json);
         for(var i = adminConnections.length - 1; i >= 0; i--){
-        	// check if connection is still open before attempting to send messages
-        	if (adminConnections[i].readyState == 1) {
-	        	try {
+            // check if connection is still open before attempting to send messages
+            if (adminConnections[i].readyState == 1) {
+                try {
 
                     ////////////////////////////////////////////////////////
                     // ---- NEW FUNCTIONALITY FOR ADMINS TO NOT GET MESSAGES
-	        		// if admin does not want to receive messages and this is a message, then skip
-	        		if( adminConnections[i].no_msgs && json['message'] ) continue;
-	        		// otherwise send message to admin
-		            else adminConnections[i].send(toSend);    		
-		            ///////////////////////////////////////////////////////
+                    // if admin does not want to receive messages and this is a message, then skip
+                    if( adminConnections[i].no_msgs && json['message'] ) continue;
+                    // otherwise send message to admin
+                    else adminConnections[i].send(toSend);          
+                    ///////////////////////////////////////////////////////
 
-		            // OLD APPROACH
-		            // adminConnections[i].send(toSend);    		
-	        	} catch (e) {
-	        		logger.log("debug", "[sendToAdmins] ERROR: WebSocket library error sending message to admin at index " + i);
-	        		logger.log("debug", e);
-	        	}        		
-        	}
+                    // OLD APPROACH
+                    // adminConnections[i].send(toSend);            
+                } catch (e) {
+                    logger.log("debug", "[sendToAdmins] ERROR: WebSocket library error sending message to admin at index " + i);
+                    logger.log("debug", e);
+                }               
+            }
         }
     };
 
