@@ -1,22 +1,30 @@
 #Running
+
 * Clone this
-* Cd to this directory
+
+* Install node modules
+``` 
+	$cd /this/directory/
+	$cd src
+	$npm install 
+```
 * Install electron 
 	* Option A: locally, for dev
 		``` npm install electron-prebuilt --save-dev ```
-		* Run
-		``` 
-			$ cd src
-			$ ./node_modules/.bin/electron . 
-		```
+		
 	* Option B: globally
 		```npm install -g electron-prebuild```
-		* Run
-		``` 
-			$cd src
-			$electron .
-		```
-* Someone better at me than Node stuff can advise if this is crazy.
+* Run
+	* A: Local electron
+	``` 
+		$ cd src
+		$ ./node_modules/.bin/electron . 
+	```
+	* B: Global electron
+	``` 
+		$cd src
+		$electron .
+	```
 
 #Building
 * Install Gulp
