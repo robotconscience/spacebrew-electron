@@ -30,7 +30,7 @@
 * Install Gulp
 	* Globally? Why not?
 	```
-		$npm install --global gulp-cli`` 
+		$npm install --global gulp-cli
 	```
 * Install Gulp electron plugin
 	```
