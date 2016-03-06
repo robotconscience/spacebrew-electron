@@ -3,6 +3,7 @@
 const electron = require('electron');
 const app = electron.app;  // Module to control application life.
 const BrowserWindow = electron.BrowserWindow;  // Module to create native browser window.
+const ipc = require('ipc');
 
 var spacebrewServer = require('./spacebrew_server');
 
@@ -27,13 +28,12 @@ app.on('window-all-closed', function() {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 app.on('ready', function() {
-  spacebrewServer.createServer({adminDir: __dirname + "/windows/admin"});
 
   // Create the browser window.
   mainWindow = new BrowserWindow({width: 800, height: 600});
 
   // and load the index.html of the app.
-  mainWindow.loadURL('http://localhost:9000');
+  mainWindow.loadURL('file://' + __dirname + "/windows/start/index.html");
 
   // Open the DevTools.
   // mainWindow.webContents.openDevTools();
@@ -45,4 +45,13 @@ app.on('ready', function() {
     // when you should delete the corresponding element.
     mainWindow = null;
   });
+});
+
+ipc.on("startServer", function(){
+  spacebrewServer.createServer({adminDir: __dirname + "/windows/admin"});
+});
+
+
+ipc.on("stopServer", function(){
+  spacebrewServer.closeServer();
 });

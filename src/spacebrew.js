@@ -21,6 +21,10 @@ var path = require('path')
     , http = require('http')
     , finalhandler = require('finalhandler')
     ;
+
+// global-ish things (for now)
+var httpServer  = null;
+var wsServer    = null;
  
 //create a new WebsocketServer
 spacebrew.createServer = function( opts ){
@@ -49,21 +53,21 @@ spacebrew.createServer = function( opts ){
     // create basic static folder
     var serve = serveStatic(opts.adminDir);
 
-    var server = http.createServer(
+    httpServer = http.createServer(
         function(req, res){
             var done = finalhandler(req, res)
             serve(req, res, done)
         }
     );
 
-    server.listen(opts.port, opts.host);
+    httpServer.listen(opts.port, opts.host);
 
     // allow websocket connections on the existing server.
-    var wss = new ws.Server({
-            server: server
+    wsServer = new ws.Server({
+            server: httpServer
         });
 
-    expose.wss = wss;
+    expose.wss = wsServer;
 
     //read-only access to properties
     expose.get = function( key ){
@@ -142,7 +146,7 @@ spacebrew.createServer = function( opts ){
      * and setup the appropriate callbacks
      * @param  {obj} ws The ws object that contains all the connection info and provides callback hooks
      */
-    wss.on('connection', function(ws) {
+    wsServer.on('connection', function(ws) {
         logger.log("info", "[wss.onconnection] someone connected");
 
         var connection = ws;
@@ -1028,3 +1032,10 @@ spacebrew.createServer = function( opts ){
     return expose;
 
 };
+
+spacebrew.closeServer = function(){
+    httpServer.close();
+    httpServer = null;
+    wsServer.close();
+    wsServer = null;
+}

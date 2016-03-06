@@ -117,3 +117,8 @@ spacebrew_server.createServer = function(server_configs, persist_configs){
 
   return spacebrew;
 }
+
+spacebrew_server.closeServer = function(){
+  spacebrew.closeServer();
+  // to-do: close persister...
+}
